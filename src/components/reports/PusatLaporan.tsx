@@ -1,0 +1,407 @@
+import React, { useState } from 'react';
+import { FileText, Printer, FileSpreadsheet, Download, Calendar, Award, BookMarked, Filter } from 'lucide-react';
+import { Siswa, Mapel, Absensi, Nilai, Agenda, Pengaturan } from '../../types';
+import { exportService } from '../../services/export';
+
+interface PusatLaporanProps {
+  siswaList: Siswa[];
+  mapelList: Mapel[];
+  absensiList: Absensi[];
+  nilaiList: Nilai[];
+  agendaList: Agenda[];
+  pengaturan: Pengaturan;
+}
+
+export const PusatLaporan: React.FC<PusatLaporanProps> = ({
+  siswaList,
+  mapelList,
+  absensiList,
+  nilaiList,
+  agendaList,
+  pengaturan,
+}) => {
+  const [selectedReport, setSelectedReport] = useState<'presensi' | 'leger' | 'agenda'>('presensi');
+  const [selectedKelas, setSelectedKelas] = useState('X RPL 1');
+  const [selectedBulan, setSelectedBulan] = useState(new Date().getMonth() + 1);
+
+  const kelasList = Array.from(new Set(siswaList.map((s) => s.kelas))).sort();
+  const studentsInClass = siswaList.filter((s) => s.kelas === selectedKelas);
+
+  const BULAN_NAMES = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            Pusat Cetak Dokumen & Rekapitulasi Laporan
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Rekap kehadiran bulanan, leger nilai rapor lengkap, dan jurnal guru siap cetak A4 atau ekspor Excel/PDF.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak Dokumen Terpilih (Ctrl+P)
+          </button>
+        </div>
+      </div>
+
+      {/* Select Report Type & Filter */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
+        <button
+          onClick={() => setSelectedReport('presensi')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            selectedReport === 'presensi'
+              ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 shadow-sm'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-900/60 rounded-xl text-blue-600">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white">Rekapitulasi Presensi</h4>
+              <p className="text-xs text-slate-500">Laporan kehadiran siswa bulanan / semester</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setSelectedReport('leger')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            selectedReport === 'leger'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 shadow-sm'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/60 rounded-xl text-emerald-600">
+              <Award className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white">Leger Nilai Rapor</h4>
+              <p className="text-xs text-slate-500">Rekap formatif, sumatif, dan nilai akhir</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setSelectedReport('agenda')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            selectedReport === 'agenda'
+              ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 shadow-sm'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-100 dark:bg-purple-900/60 rounded-xl text-purple-600">
+              <BookMarked className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white">Jurnal Agenda Mengajar</h4>
+              <p className="text-xs text-slate-500">Dokumentasi pelaksanaan KBM guru</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Filter Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 no-print">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Pilih Rombel / Kelas:</label>
+            <select
+              value={selectedKelas}
+              onChange={(e) => setSelectedKelas(e.target.value)}
+              className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg"
+            >
+              {kelasList.map((k) => (
+                <option key={k} value={k}>
+                  {k} ({siswaList.filter((s) => s.kelas === k).length} Siswa)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedReport === 'presensi' && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bulan:</label>
+              <select
+                value={selectedBulan}
+                onChange={(e) => setSelectedBulan(Number(e.target.value))}
+                className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg"
+              >
+                {BULAN_NAMES.map((b, idx) => (
+                  <option key={idx + 1} value={idx + 1}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {selectedReport === 'presensi' && (
+            <button
+              onClick={() => exportService.exportAbsensiToExcel(absensiList, selectedKelas, BULAN_NAMES[selectedBulan - 1])}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Ekspor Excel
+            </button>
+          )}
+
+          {selectedReport === 'leger' && (
+            <>
+              <button
+                onClick={() => exportService.exportLegerPdf(nilaiList, siswaList, selectedKelas, pengaturan)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Unduh PDF
+              </button>
+              <button
+                onClick={() => exportService.exportLegerNilaiToExcel(nilaiList, siswaList, selectedKelas)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Unduh Excel
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Printable Document Container */}
+      <div className="bg-white text-slate-900 border border-slate-300 p-8 rounded-2xl shadow-md print:border-none print:shadow-none print:p-0">
+        {/* Kop Surat Sekolah */}
+        <div className="text-center kop-surat">
+          <h3 className="font-bold text-sm uppercase tracking-wide">{pengaturan.dinasPendidikan}</h3>
+          <h2 className="font-extrabold text-lg uppercase tracking-wider">{pengaturan.namaSekolah}</h2>
+          <p className="text-xs text-slate-600">
+            {pengaturan.alamatSekolah} | Telp: {pengaturan.noTelpSekolah} | Email: {pengaturan.emailSekolah || '-'}
+          </p>
+        </div>
+
+        {/* Report 1: Presensi View */}
+        {selectedReport === 'presensi' && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="font-bold text-base uppercase underline">REKAPITULASI PRESENSI KEHADIRAN SISWA</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Kelas: <b>{selectedKelas}</b> | Bulan: <b>{BULAN_NAMES[selectedBulan - 1]}</b> | Tahun: <b>2026</b>
+              </p>
+            </div>
+
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 w-8 text-center">No</th>
+                  <th className="py-2 px-2 w-28">NISN</th>
+                  <th className="py-2 px-3">Nama Lengkap Siswa</th>
+                  <th className="py-2 px-2 text-center w-10">L/P</th>
+                  <th className="py-2 px-2 text-center w-14">Hadir (H)</th>
+                  <th className="py-2 px-2 text-center w-14">Sakit (S)</th>
+                  <th className="py-2 px-2 text-center w-14">Izin (I)</th>
+                  <th className="py-2 px-2 text-center w-14">Alpa (A)</th>
+                  <th className="py-2 px-2 text-center w-20">% Kehadiran</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentsInClass.map((s, idx) => {
+                  const studentAttendance = absensiList.filter((a) => a.siswaId === s.id);
+                  const hCount = studentAttendance.filter((a) => a.status === 'H').length;
+                  const sCount = studentAttendance.filter((a) => a.status === 'S').length;
+                  const iCount = studentAttendance.filter((a) => a.status === 'I').length;
+                  const aCount = studentAttendance.filter((a) => a.status === 'A').length;
+                  const totalRecorded = hCount + sCount + iCount + aCount || 1;
+                  const pct = Math.round((hCount / totalRecorded) * 100);
+
+                  return (
+                    <tr key={s.id}>
+                      <td className="py-2 px-2 text-center font-mono">{idx + 1}</td>
+                      <td className="py-2 px-2 font-mono font-medium">{s.nisn}</td>
+                      <td className="py-2 px-3 font-semibold">{s.nama}</td>
+                      <td className="py-2 px-2 text-center">{s.jenisKelamin}</td>
+                      <td className="py-2 px-2 text-center font-bold text-emerald-700">{hCount}</td>
+                      <td className="py-2 px-2 text-center text-amber-700">{sCount}</td>
+                      <td className="py-2 px-2 text-center text-blue-700">{iCount}</td>
+                      <td className="py-2 px-2 text-center text-rose-700">{aCount}</td>
+                      <td className="py-2 px-2 text-center font-mono font-bold">{pct}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Report 2: Leger View */}
+        {selectedReport === 'leger' && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="font-bold text-base uppercase underline">LEGER NILAI ASESMEN FORMATIF & SUMATIF</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Kelas: <b>{selectedKelas}</b> | Mapel: <b>{pengaturan.mapelUtama}</b> | Guru: <b>{pengaturan.namaGuru}</b>
+              </p>
+            </div>
+
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 w-8 text-center">No</th>
+                  <th className="py-2 px-2 w-28">NISN</th>
+                  <th className="py-2 px-3">Nama Lengkap Siswa</th>
+                  <th className="py-2 px-2 text-center w-24">Formatif (40%)</th>
+                  <th className="py-2 px-2 text-center w-24">Sumatif (40%)</th>
+                  <th className="py-2 px-2 text-center w-20">SAS (20%)</th>
+                  <th className="py-2 px-2 text-center w-24 font-bold">Nilai Akhir</th>
+                  <th className="py-2 px-2 text-center w-20">Predikat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentsInClass.map((s, idx) => {
+                  const studentGrades = nilaiList.filter((n) => n.siswaId === s.id);
+                  const formatifScores = studentGrades.filter((n) => n.jenis === 'formatif').map((n) => n.skor);
+                  const sumatifScores = studentGrades.filter((n) => n.jenis === 'sumatif').map((n) => n.skor);
+                  const pasScores = studentGrades.filter((n) => n.jenis === 'pas').map((n) => n.skor);
+
+                  const avgFormatif = formatifScores.length
+                    ? Math.round(formatifScores.reduce((a, b) => a + b, 0) / formatifScores.length)
+                    : 0;
+                  const avgSumatif = sumatifScores.length
+                    ? Math.round(sumatifScores.reduce((a, b) => a + b, 0) / sumatifScores.length)
+                    : 0;
+                  const avgPas = pasScores.length
+                    ? Math.round(pasScores.reduce((a, b) => a + b, 0) / pasScores.length)
+                    : 0;
+
+                  const na = Math.round(avgFormatif * 0.4 + avgSumatif * 0.4 + avgPas * 0.2);
+                  let predikat = 'D';
+                  if (na >= 90) predikat = 'A (Sangat Baik)';
+                  else if (na >= 80) predikat = 'B (Baik)';
+                  else if (na >= 70) predikat = 'C (Cukup)';
+
+                  return (
+                    <tr key={s.id}>
+                      <td className="py-2 px-2 text-center font-mono">{idx + 1}</td>
+                      <td className="py-2 px-2 font-mono font-medium">{s.nisn}</td>
+                      <td className="py-2 px-3 font-semibold">{s.nama}</td>
+                      <td className="py-2 px-2 text-center font-mono">{avgFormatif || '-'}</td>
+                      <td className="py-2 px-2 text-center font-mono">{avgSumatif || '-'}</td>
+                      <td className="py-2 px-2 text-center font-mono">{avgPas || '-'}</td>
+                      <td className="py-2 px-2 text-center font-mono font-bold text-blue-700">{na || '-'}</td>
+                      <td className="py-2 px-2 text-center font-semibold">{predikat}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Report 3: Agenda View */}
+        {selectedReport === 'agenda' && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="font-bold text-base uppercase underline">JURNAL PELAKSANAAN MENGAJAR GURU</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Guru: <b>{pengaturan.namaGuru}</b> | NIP: <b>{pengaturan.nipGuru}</b>
+              </p>
+            </div>
+
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 w-8 text-center">No</th>
+                  <th className="py-2 px-2 w-24">Tanggal</th>
+                  <th className="py-2 px-2 w-16">Kelas</th>
+                  <th className="py-2 px-3 w-40">Mata Pelajaran</th>
+                  <th className="py-2 px-3">Materi Pokok & Kegiatan</th>
+                  <th className="py-2 px-3 w-44">Kendala & Refleksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agendaList.map((a, idx) => (
+                  <tr key={a.id}>
+                    <td className="py-2 px-2 text-center font-mono">{idx + 1}</td>
+                    <td className="py-2 px-2 font-mono">{a.tanggal}</td>
+                    <td className="py-2 px-2 font-semibold">{a.kelas}</td>
+                    <td className="py-2 px-3">{a.mapel}</td>
+                    <td className="py-2 px-3">
+                      <b>{a.materi}</b>
+                      <p className="text-[11px] text-slate-600 mt-0.5">{a.kegiatan}</p>
+                    </td>
+                    <td className="py-2 px-3 text-[11px]">
+                      <span className="text-amber-800">Kendala: {a.kendala || '-'}</span>
+                      <br />
+                      <span className="text-emerald-800">Refleksi: {a.refleksi || '-'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tanda Tangan Sejajar Format Transparan */}
+        <div className="mt-8 pt-4">
+          <table style={{ border: 'none', width: '100%' }}>
+            <tbody>
+              <tr style={{ border: 'none' }}>
+                <td style={{ border: 'none', width: '50%', textAlign: 'left', verticalAlign: 'top' }}>
+                  <p className="text-xs">Mengetahui,</p>
+                  <p className="text-xs font-bold">Kepala {pengaturan.namaSekolah}</p>
+                  <div style={{ height: '55px' }}></div>
+                  <p className="text-xs font-bold underline">{pengaturan.namaKepsek}</p>
+                  <p className="text-xs">NIP. {pengaturan.nipKepsek}</p>
+                </td>
+                <td style={{ border: 'none', width: '50%', textAlign: 'right', verticalAlign: 'top' }}>
+                  <p className="text-xs">
+                    {pengaturan.kota},{' '}
+                    {new Date().toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                  <p className="text-xs font-bold">Guru Mata Pelajaran</p>
+                  <div style={{ height: '55px' }}></div>
+                  <p className="text-xs font-bold underline">{pengaturan.namaGuru}</p>
+                  <p className="text-xs">NIP. {pengaturan.nipGuru}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
