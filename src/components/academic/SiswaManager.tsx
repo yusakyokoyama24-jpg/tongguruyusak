@@ -89,6 +89,8 @@ export const SiswaManager: React.FC<SiswaManagerProps> = ({ siswaList, onOpenCar
       jenisKelamin: formData.jenisKelamin || 'L',
       noHpOrtu: formData.noHpOrtu?.trim() || '',
       alamat: formData.alamat?.trim() || '',
+      foto: formData.foto?.trim() || '',
+      statusKartu: 'Aktif',
       userId: 'master_guru_default',
     };
 
@@ -271,6 +273,13 @@ export const SiswaManager: React.FC<SiswaManagerProps> = ({ siswaList, onOpenCar
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
+                          onClick={onOpenCardPrinter}
+                          className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
+                          title="Cetak & Lihat Kartu Siswa"
+                        >
+                          📇 Kartu
+                        </button>
+                        <button
                           onClick={() => handleOpenEdit(s)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                           title="Edit Siswa"
@@ -385,6 +394,19 @@ export const SiswaManager: React.FC<SiswaManagerProps> = ({ siswaList, onOpenCar
                   onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white"
                   placeholder="Jalan, RT/RW, Kelurahan, Kecamatan"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Foto Kartu Siswa (URL Gambar)
+                </label>
+                <input
+                  type="url"
+                  value={formData.foto || ''}
+                  onChange={(e) => setFormData({ ...formData, foto: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
+                  placeholder="Tempelkan URL foto siswa (https://...)"
                 />
               </div>
 

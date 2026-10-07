@@ -1,4 +1,4 @@
-import { Siswa, Mapel, Jadwal, Absensi, Nilai, Agenda, Bimbingan, Pengaturan, UserSession } from '../types';
+import { Siswa, Mapel, Jadwal, Absensi, Nilai, Agenda, Bimbingan, Pengaturan, UserSession, LogAktivitas } from '../types';
 
 const STORAGE_KEYS = {
   SISWA: 'tongguru_siswa_v1',
@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   PENGATURAN: 'tongguru_pengaturan_v1',
   AUTH: 'tongguru_auth_v1',
   THEME: 'tongguru_theme_v1',
+  LOGS: 'tongguru_logs_v1',
 };
 
 // Initial Default Settings
@@ -313,6 +314,49 @@ const SEED_BIMBINGAN: Bimbingan[] = [
   },
 ];
 
+const SEED_LOGS: LogAktivitas[] = [
+  {
+    id: 'log_001',
+    kategori: 'presensi',
+    judul: 'Presensi Kamera QR Dilakukan',
+    keterangan: 'Ahmad Faiz Al-Ghifari (X RPL 1) terekam HADIR',
+    waktu: 'Baru saja',
+    timestamp: Date.now() - 2 * 60 * 1000,
+  },
+  {
+    id: 'log_002',
+    kategori: 'nilai',
+    judul: 'Asesmen Nilai Diinput',
+    keterangan: 'Skor 88 tersimpan untuk Informatika Dasar (X RPL 1)',
+    waktu: '12 menit lalu',
+    timestamp: Date.now() - 12 * 60 * 1000,
+  },
+  {
+    id: 'log_003',
+    kategori: 'ai',
+    judul: 'Modul AI Dihasilkan',
+    keterangan: 'Modul Ajar Deep Learning: Algoritma Pemrograman',
+    waktu: '35 menit lalu',
+    timestamp: Date.now() - 35 * 60 * 1000,
+  },
+  {
+    id: 'log_004',
+    kategori: 'agenda',
+    judul: 'Jurnal Mengajar Disimpan',
+    keterangan: 'Catatan KBM harian kelas X RPL 1 tersimpan',
+    waktu: '1 jam lalu',
+    timestamp: Date.now() - 60 * 60 * 1000,
+  },
+  {
+    id: 'log_005',
+    kategori: 'siswa',
+    judul: 'Kartu Siswa Diaktifkan',
+    keterangan: 'Seluruh Kartu Tanda Pelajar digital terverifikasi',
+    waktu: '2 jam lalu',
+    timestamp: Date.now() - 120 * 60 * 1000,
+  },
+];
+
 // Event emitter for reactive storage updates
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
@@ -390,6 +434,32 @@ export const dbService = {
     if (!localStorage.getItem(STORAGE_KEYS.ABSENSI)) {
       localStorage.setItem(STORAGE_KEYS.ABSENSI, JSON.stringify([]));
     }
+    if (!localStorage.getItem(STORAGE_KEYS.LOGS)) {
+      localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(SEED_LOGS));
+    }
+  },
+
+  // Logs Aktivitas System
+  getLogs(): LogAktivitas[] {
+    this.init();
+    const raw = localStorage.getItem(STORAGE_KEYS.LOGS);
+    try {
+      return raw ? JSON.parse(raw) : SEED_LOGS;
+    } catch {
+      return SEED_LOGS;
+    }
+  },
+
+  recordLog(log: Omit<LogAktivitas, 'id' | 'timestamp'>) {
+    const list = this.getLogs();
+    const newEntry: LogAktivitas = {
+      ...log,
+      id: `log_${Date.now()}`,
+      timestamp: Date.now(),
+    };
+    const updated = [newEntry, ...list].slice(0, 30);
+    localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(updated));
+    notifyListeners();
   },
 
   // Auth
@@ -437,7 +507,11 @@ export const dbService = {
     this.init();
     const raw = localStorage.getItem(STORAGE_KEYS.SISWA);
     try {
-      return raw ? JSON.parse(raw) : [];
+      const list: Siswa[] = raw ? JSON.parse(raw) : [];
+      return list.map((s) => ({
+        ...s,
+        statusKartu: s.statusKartu || 'Aktif',
+      }));
     } catch {
       return [];
     }

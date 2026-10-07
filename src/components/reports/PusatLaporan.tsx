@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { FileText, Printer, FileSpreadsheet, Download, Calendar, Award, BookMarked, Filter } from 'lucide-react';
+import { FileText, Printer, FileSpreadsheet, Download, Calendar, Award, BookMarked, Filter, Users } from 'lucide-react';
 import { Siswa, Mapel, Absensi, Nilai, Agenda, Pengaturan } from '../../types';
 import { exportService } from '../../services/export';
+import { showToast } from '../../utils/toast';
 
 interface PusatLaporanProps {
   siswaList: Siswa[];
@@ -46,6 +47,27 @@ export const PusatLaporan: React.FC<PusatLaporanProps> = ({
     window.print();
   };
 
+  const handleExportSiswaExcel = () => {
+    const listToExport = selectedKelas === 'all' ? siswaList : studentsInClass;
+    exportService.exportSiswaToExcel(listToExport, `Data_Siswa_${selectedKelas}.xlsx`);
+    showToast('Ekspor Data Siswa Berhasil!', 'success', `Sebanyak ${listToExport.length} data siswa kelas ${selectedKelas} telah diekspor ke format Excel (.xlsx).`);
+  };
+
+  const handleExportLegerExcel = () => {
+    exportService.exportLegerNilaiToExcel(nilaiList, siswaList, selectedKelas);
+    showToast('Leger Nilai Diekspor!', 'success', `Rekap Leger Nilai kelas ${selectedKelas} berhasil disimpan ke format Excel (.xlsx).`);
+  };
+
+  const handleExportPresensiExcel = () => {
+    exportService.exportAbsensiToExcel(absensiList, selectedKelas, BULAN_NAMES[selectedBulan - 1]);
+    showToast('Rekap Presensi Diekspor!', 'success', `Rekap presensi bulan ${BULAN_NAMES[selectedBulan - 1]} kelas ${selectedKelas} berhasil diekspor.`);
+  };
+
+  const handleExportAgendaExcel = () => {
+    exportService.exportAgendaToExcel(agendaList, `Jurnal_Agenda_Mengajar_${selectedKelas}.xlsx`);
+    showToast('Jurnal Agenda Diekspor!', 'success', 'Jurnal agenda mengajar berhasil diekspor ke file Excel (.xlsx).');
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -56,17 +78,33 @@ export const PusatLaporan: React.FC<PusatLaporanProps> = ({
             Pusat Cetak Dokumen & Rekapitulasi Laporan
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Rekap kehadiran bulanan, leger nilai rapor lengkap, dan jurnal guru siap cetak A4 atau ekspor Excel/PDF.
+            Rekap kehadiran bulanan, leger nilai rapor lengkap, data siswa, dan jurnal guru siap cetak A4 atau ekspor Excel/PDF.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportSiswaExcel}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+            title="Ekspor Seluruh Data Siswa ke Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Ekspor Data Siswa (.xlsx)
+          </button>
+          <button
+            onClick={handleExportLegerExcel}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+            title="Ekspor Leger Nilai ke Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Ekspor Leger Nilai (.xlsx)
+          </button>
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
           >
             <Printer className="w-4 h-4" />
-            Cetak Dokumen Terpilih (Ctrl+P)
+            Cetak (Ctrl+P)
           </button>
         </div>
       </div>
@@ -167,14 +205,14 @@ export const PusatLaporan: React.FC<PusatLaporanProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedReport === 'presensi' && (
             <button
-              onClick={() => exportService.exportAbsensiToExcel(absensiList, selectedKelas, BULAN_NAMES[selectedBulan - 1])}
+              onClick={handleExportPresensiExcel}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              Ekspor Excel
+              Ekspor Excel (.xlsx)
             </button>
           )}
 
@@ -188,26 +226,58 @@ export const PusatLaporan: React.FC<PusatLaporanProps> = ({
                 Unduh PDF
               </button>
               <button
-                onClick={() => exportService.exportLegerNilaiToExcel(nilaiList, siswaList, selectedKelas)}
+                onClick={handleExportLegerExcel}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                Unduh Excel
+                Ekspor Leger Excel (.xlsx)
               </button>
             </>
+          )}
+
+          {selectedReport === 'agenda' && (
+            <button
+              onClick={handleExportAgendaExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Ekspor Agenda Excel (.xlsx)
+            </button>
           )}
         </div>
       </div>
 
       {/* Printable Document Container */}
       <div className="bg-white text-slate-900 border border-slate-300 p-8 rounded-2xl shadow-md print:border-none print:shadow-none print:p-0">
-        {/* Kop Surat Sekolah */}
-        <div className="text-center kop-surat">
-          <h3 className="font-bold text-sm uppercase tracking-wide">{pengaturan.dinasPendidikan}</h3>
-          <h2 className="font-extrabold text-lg uppercase tracking-wider">{pengaturan.namaSekolah}</h2>
-          <p className="text-xs text-slate-600">
-            {pengaturan.alamatSekolah} | Telp: {pengaturan.noTelpSekolah} | Email: {pengaturan.emailSekolah || '-'}
-          </p>
+        {/* Kop Surat Sekolah Resmi */}
+        <div className="flex items-center justify-between pb-3 mb-5 border-b-4 border-double border-slate-900 kop-surat">
+          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+            {pengaturan.logoDinasUrl ? (
+              <img src={pengaturan.logoDinasUrl} alt="Logo Dinas" className="w-14 h-14 object-contain" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center font-bold text-xs text-blue-800">
+                DINAS
+              </div>
+            )}
+          </div>
+
+          <div className="text-center flex-1 px-4">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800">{pengaturan.dinasPendidikan}</h3>
+            <h2 className="font-extrabold text-base uppercase tracking-widest text-slate-900">{pengaturan.namaSekolah}</h2>
+            <p className="text-[11px] text-slate-600 font-medium">
+              {pengaturan.alamatSekolah} | Telp: {pengaturan.noTelpSekolah} | Email: {pengaturan.emailSekolah || '-'}
+            </p>
+          </div>
+
+          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+            {pengaturan.logoSekolahUrl ? (
+              <img src={pengaturan.logoSekolahUrl} alt="Logo Sekolah" className="w-14 h-14 object-contain" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-xs text-emerald-800">
+                SEKOLAH
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Report 1: Presensi View */}

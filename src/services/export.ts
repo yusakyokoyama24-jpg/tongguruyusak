@@ -109,6 +109,25 @@ export const exportService = {
     XLSX.writeFile(wb, `Leger_Nilai_${kelas}.xlsx`);
   },
 
+  // 4b. Export Agenda to Excel
+  exportAgendaToExcel(agendaList: Agenda[], filename = 'Jurnal_Agenda_Mengajar.xlsx') {
+    const data = agendaList.map((a, idx) => ({
+      No: idx + 1,
+      Tanggal: a.tanggal,
+      Kelas: a.kelas,
+      'Mata Pelajaran': a.mapel,
+      'Materi Pokok': a.materi,
+      Kegiatan: a.kegiatan,
+      Kendala: a.kendala || '-',
+      Refleksi: a.refleksi || '-',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Jurnal Agenda');
+    XLSX.writeFile(wb, filename);
+  },
+
   // 5. Export PowerPoint (.pptx) via pptxgenjs
   exportPptPresentation(presentation: PptPresentation) {
     const ppt = new pptxgen();

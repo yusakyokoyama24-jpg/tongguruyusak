@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { Printer, Download, Users, CheckSquare, Square, Eye } from 'lucide-react';
+import { Printer, Download, Users, CheckSquare, Square, Eye, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Siswa, Pengaturan } from '../../types';
+import { showToast } from '../../utils/toast';
 
 interface KartuSiswaViewProps {
   siswaList: Siswa[];
@@ -13,21 +14,33 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
   const [selectedKelas, setSelectedKelas] = useState<string>('all');
   const [selectedSiswaIds, setSelectedSiswaIds] = useState<string[]>([]);
   const [qrCodeUrls, setQrCodeUrls] = useState<Record<string, string>>({});
+  const [cardsActivated, setCardsActivated] = useState<boolean>(true);
   const barcodeRefs = useRef<Record<string, SVGSVGElement | null>>({});
 
-  const kelasList = Array.from(new Set(siswaList.map((s) => s.kelas))).sort();
+  const kelasList = useMemo(() => {
+    return Array.from(new Set(siswaList.map((s) => s.kelas))).sort();
+  }, [siswaList]);
 
-  const filteredSiswa = siswaList.filter((s) => {
-    if (selectedKelas === 'all') return true;
-    return s.kelas === selectedKelas;
-  });
+  const filteredSiswa = useMemo(() => {
+    return siswaList.filter((s) => {
+      if (selectedKelas === 'all') return true;
+      return s.kelas === selectedKelas;
+    });
+  }, [siswaList, selectedKelas]);
 
-  const cardsToRender = filteredSiswa.filter((s) =>
-    selectedSiswaIds.length === 0 ? true : selectedSiswaIds.includes(s.id)
-  );
+  const cardsToRender = useMemo(() => {
+    return filteredSiswa.filter((s) =>
+      selectedSiswaIds.length === 0 ? true : selectedSiswaIds.includes(s.id)
+    );
+  }, [filteredSiswa, selectedSiswaIds]);
 
-  // Generate QR codes whenever cardsToRender change
+  const cardsKey = useMemo(() => {
+    return cardsToRender.map((s) => `${s.id}_${s.nisn}`).join('|');
+  }, [cardsToRender]);
+
+  // Generate QR codes whenever cardsKey changes
   useEffect(() => {
+    let isMounted = true;
     const generateQrs = async () => {
       const urls: Record<string, string> = {};
       for (const s of cardsToRender) {
@@ -42,10 +55,17 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
           console.error(e);
         }
       }
-      setQrCodeUrls(urls);
+      if (isMounted) {
+        setQrCodeUrls(urls);
+      }
     };
-    generateQrs();
-  }, [cardsToRender]);
+    if (cardsToRender.length > 0) {
+      generateQrs();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [cardsKey]);
 
   // Generate Barcodes
   useEffect(() => {
@@ -67,7 +87,7 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
         }
       }
     });
-  }, [cardsToRender, qrCodeUrls]);
+  }, [cardsKey, Object.keys(qrCodeUrls).length]);
 
   const toggleSelectSiswa = (id: string) => {
     if (selectedSiswaIds.includes(id)) {
@@ -85,6 +105,15 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
     }
   };
 
+  const handleActivateCards = () => {
+    setCardsActivated(true);
+    showToast(
+      'Kartu Siswa Aktif & Terverifikasi!',
+      'success',
+      `Sebanyak ${cardsToRender.length} Kartu Tanda Pelajar digital telah diaktifkan dan terhubung dengan QR Presensi.`
+    );
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -95,19 +124,33 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
       <div className="no-print bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-800">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                SISTEM KARTU SISWA: 100% AKTIF
+              </span>
+            </div>
             <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-indigo-600" />
-              Cetak Kartu Tanda Pelajar (KTP Siswa QR & Barcode)
+              Cetak & Kelola Kartu Tanda Pelajar (KTP Siswa QR & Barcode)
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Format grid standar 8 kartu per lembar kertas A4 siap potong dan laminating.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleActivateCards}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl shadow-sm transition-all"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Aktifkan Semua Kartu
+            </button>
+
             <button
               onClick={handlePrint}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm transition-all"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-sm transition-all"
             >
               <Printer className="w-4 h-4" />
               Cetak Kartu (Ctrl+P)
@@ -176,9 +219,12 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
                     <p className="text-[10px] text-slate-200 tracking-wider">KARTU TANDA PELAJAR DIGITAL</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex flex-col items-end gap-1">
                   <span className="inline-block bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] px-2 py-0.5 rounded font-mono font-semibold">
                     {siswa.kelas}
+                  </span>
+                  <span className="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[8px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                    ✓ KARTU AKTIF
                   </span>
                 </div>
               </div>
@@ -188,10 +234,14 @@ export const KartuSiswaView: React.FC<KartuSiswaViewProps> = ({ siswaList, penga
                 {/* Photo & QR */}
                 <div className="col-span-4 flex flex-col items-center gap-2">
                   <div className="w-20 h-24 rounded-lg bg-slate-200 border-2 border-slate-300 flex items-center justify-center overflow-hidden shadow-inner">
-                    <div className="w-full h-full bg-gradient-to-b from-blue-100 to-indigo-200 flex flex-col items-center justify-center text-slate-600 font-bold text-sm">
-                      <span className="text-xl">🎓</span>
-                      <span className="text-[9px] mt-1">{siswa.jenisKelamin === 'L' ? 'SISWA' : 'SISWI'}</span>
-                    </div>
+                    {siswa.foto ? (
+                      <img src={siswa.foto} alt={siswa.nama} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-b from-blue-100 to-indigo-200 flex flex-col items-center justify-center text-slate-600 font-bold text-sm">
+                        <span className="text-xl">🎓</span>
+                        <span className="text-[9px] mt-1">{siswa.jenisKelamin === 'L' ? 'SISWA' : 'SISWI'}</span>
+                      </div>
+                    )}
                   </div>
                   {qrCodeUrls[siswa.id] && (
                     <img

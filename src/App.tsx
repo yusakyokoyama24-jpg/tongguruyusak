@@ -29,9 +29,14 @@ import {
   Wifi,
   ChevronRight,
   Layers,
+  Camera,
+  Building2,
+  Upload,
+  Check,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { dbService } from './services/db';
+import { showToast } from './utils/toast';
 import { Siswa, Mapel, Jadwal, Absensi, Nilai, Agenda, Bimbingan, Pengaturan, UserSession } from './types';
 
 // Academic Components
@@ -71,6 +76,10 @@ export default function App() {
   // Mobile BottomSheet state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bottomSheetType, setBottomSheetType] = useState<'akademik' | 'ai' | null>(null);
+
+  // Upload Logo Modal state
+  const [isUploadLogoModalOpen, setIsUploadLogoModalOpen] = useState(false);
+  const [logoFileUrl, setLogoFileUrl] = useState('');
 
   // Reactive DB state
   const [siswaList, setSiswaList] = useState<Siswa[]>([]);
@@ -178,28 +187,52 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 no-print">
+      {/* Top Header Bar with Rich Gradient & Proportional Fonts */}
+      <header className="sticky top-0 z-30 bg-gradient-to-r from-[#0a192f] via-[#1a3a5c] to-[#0f172a] text-white shadow-xl border-b border-blue-900/60 px-4 sm:px-6 py-3 no-print">
         <div className="flex items-center justify-between gap-4">
           {/* Logo & Mobile Menu Trigger */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              className="lg:hidden p-2 text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1a3a5c] to-blue-600 flex items-center justify-center shadow-sm">
-                <ShieldCheck className="w-5 h-5 text-amber-300" />
+            {/* School Logo (Left of Title) & Title */}
+            <div className="flex items-center gap-3">
+              {/* Interactive Custom School Logo replacing default logo on the LEFT */}
+              <div
+                onClick={() => {
+                  setLogoFileUrl(pengaturan.logoSekolahUrl || '');
+                  setIsUploadLogoModalOpen(true);
+                }}
+                className="relative group w-11 h-11 rounded-2xl bg-white/95 dark:bg-slate-800 border-2 border-amber-400 p-1 flex items-center justify-center shadow-lg shrink-0 cursor-pointer transition-all hover:scale-105"
+                title="Klik untuk Unggah / Ganti Logo Sekolah Custom"
+              >
+                {pengaturan.logoSekolahUrl ? (
+                  <img src={pengaturan.logoSekolahUrl} alt="Logo Sekolah" className="w-full h-full object-contain rounded-lg" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-[#1a3a5c] to-blue-600 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-amber-300" />
+                  </div>
+                )}
+                {/* Camera Overlay Badge */}
+                <div className="absolute -bottom-1 -right-1 p-1 bg-amber-400 text-slate-950 rounded-full shadow-md group-hover:scale-110 transition-transform">
+                  <Camera className="w-2.5 h-2.5 font-bold" />
+                </div>
               </div>
+
+              {/* Title Text */}
               <div>
-                <h1 className="font-extrabold text-base tracking-tight leading-tight flex items-center gap-1.5 text-slate-900 dark:text-white">
-                  Tongguru <span className="text-blue-600 dark:text-blue-400 font-medium text-xs px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40">EdAdmin Pro</span>
+                <h1
+                  onClick={() => setActiveTab('dashboard')}
+                  className="font-black text-xs sm:text-sm md:text-base tracking-wide leading-tight uppercase text-white cursor-pointer hover:text-amber-300 transition-colors drop-shadow-xs"
+                >
+                  DASHBOARD ADMINISTRASI TONGGURU YUSAK YOKOYAMA
                 </h1>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block truncate max-w-xs">
-                  {pengaturan.namaSekolah}
+                <p className="text-[11px] text-blue-200/90 hidden sm:block truncate max-w-sm font-medium">
+                  {pengaturan.namaSekolah} • Master Guru {pengaturan.namaGuru.split(',')[0]}
                 </p>
               </div>
             </div>
@@ -208,25 +241,25 @@ export default function App() {
           {/* Teacher Profile & Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Cloud Status Badge */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-[11px] font-bold text-emerald-300 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               Cloud Database Aktif
             </div>
 
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-2 text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
               title={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
             >
-              {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+              {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-200" />}
             </button>
 
             {/* Teacher Badge */}
-            <div className="hidden md:flex items-center gap-2.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+            <div className="hidden md:flex items-center gap-2.5 pl-2 border-l border-white/20">
               <div
                 onClick={() => setActiveTab('pengaturan')}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-blue-500 shadow-xs cursor-pointer bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-white"
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400 shadow-md cursor-pointer bg-slate-800 flex items-center justify-center font-bold text-xs text-white"
                 title="Klik untuk ubah foto profil"
               >
                 {pengaturan.fotoProfil ? (
@@ -238,10 +271,10 @@ export default function App() {
                 )}
               </div>
               <div className="text-left">
-                <span className="block text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                <span className="block text-xs font-bold text-white leading-tight">
                   {pengaturan.namaGuru.split(',')[0]}
                 </span>
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="block text-[10px] text-blue-200/80 font-medium">
                   {currentUser.role}
                 </span>
               </div>
@@ -250,7 +283,7 @@ export default function App() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+              className="p-2 text-rose-300 hover:bg-rose-500/20 rounded-xl transition-colors"
               title="Keluar Akun"
             >
               <LogOut className="w-4 h-4" />
@@ -347,83 +380,85 @@ export default function App() {
           </div>
         )}
 
-        {/* Content Body */}
+        {/* Content Body with Smooth Fade-In Animation on Tab Change */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-24 lg:pb-8">
-          {activeTab === 'dashboard' && (
-            <DashboardOverview
-              siswaList={siswaList}
-              mapelList={mapelList}
-              jadwalList={jadwalList}
-              absensiList={absensiList}
-              nilaiList={nilaiList}
-              agendaList={agendaList}
-              pengaturan={pengaturan}
-              onNavigate={(tab) => setActiveTab(tab)}
-            />
-          )}
+          <div key={activeTab} className="animate-fade-in-tab">
+            {activeTab === 'dashboard' && (
+              <DashboardOverview
+                siswaList={siswaList}
+                mapelList={mapelList}
+                jadwalList={jadwalList}
+                absensiList={absensiList}
+                nilaiList={nilaiList}
+                agendaList={agendaList}
+                pengaturan={pengaturan}
+                onNavigate={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-          {activeTab === 'siswa' && (
-            <SiswaManager
-              siswaList={siswaList}
-              onOpenCardPrinter={() => setActiveTab('kartu-siswa')}
-            />
-          )}
+            {activeTab === 'siswa' && (
+              <SiswaManager
+                siswaList={siswaList}
+                onOpenCardPrinter={() => setActiveTab('kartu-siswa')}
+              />
+            )}
 
-          {activeTab === 'kartu-siswa' && (
-            <KartuSiswaView siswaList={siswaList} pengaturan={pengaturan} />
-          )}
+            {activeTab === 'kartu-siswa' && (
+              <KartuSiswaView siswaList={siswaList} pengaturan={pengaturan} />
+            )}
 
-          {activeTab === 'jadwal' && (
-            <JadwalManager mapelList={mapelList} jadwalList={jadwalList} />
-          )}
+            {activeTab === 'jadwal' && (
+              <JadwalManager mapelList={mapelList} jadwalList={jadwalList} />
+            )}
 
-          {activeTab === 'presensi' && (
-            <AbsensiManager siswaList={siswaList} absensiList={absensiList} />
-          )}
+            {activeTab === 'presensi' && (
+              <AbsensiManager siswaList={siswaList} absensiList={absensiList} />
+            )}
 
-          {activeTab === 'nilai' && (
-            <NilaiManager
-              siswaList={siswaList}
-              mapelList={mapelList}
-              nilaiList={nilaiList}
-              pengaturan={pengaturan}
-            />
-          )}
+            {activeTab === 'nilai' && (
+              <NilaiManager
+                siswaList={siswaList}
+                mapelList={mapelList}
+                nilaiList={nilaiList}
+                pengaturan={pengaturan}
+              />
+            )}
 
-          {activeTab === 'agenda' && (
-            <AgendaManager agendaList={agendaList} pengaturan={pengaturan} />
-          )}
+            {activeTab === 'agenda' && (
+              <AgendaManager agendaList={agendaList} pengaturan={pengaturan} />
+            )}
 
-          {activeTab === 'bimbingan' && (
-            <BimbinganManager bimbinganList={bimbinganList} siswaList={siswaList} />
-          )}
+            {activeTab === 'bimbingan' && (
+              <BimbinganManager bimbinganList={bimbinganList} siswaList={siswaList} />
+            )}
 
-          {activeTab === 'perangkat-unduh' && <DownloadPerangkat />}
+            {activeTab === 'perangkat-unduh' && <DownloadPerangkat />}
 
-          {/* AI Suite Modules */}
-          {activeTab === 'ai-modul' && <ModulAjarGenerator />}
-          {activeTab === 'ai-perangkat' && <PerangkatAjarGenerator />}
-          {activeTab === 'ai-kbc' && <KbcGenerator />}
-          {activeTab === 'ai-kokurikuler' && <KokurikulerGenerator />}
-          {activeTab === 'ai-soal' && <SoalUjianGenerator />}
-          {activeTab === 'ai-kartu-soal' && <KartuSoalGenerator />}
-          {activeTab === 'ai-lkpd' && <LkpdGenerator />}
-          {activeTab === 'ai-ppt' && <PptGenerator />}
-          {activeTab === 'ai-chat' && <ChatAsistenGuru />}
+            {/* AI Suite Modules */}
+            {activeTab === 'ai-modul' && <ModulAjarGenerator />}
+            {activeTab === 'ai-perangkat' && <PerangkatAjarGenerator />}
+            {activeTab === 'ai-kbc' && <KbcGenerator />}
+            {activeTab === 'ai-kokurikuler' && <KokurikulerGenerator />}
+            {activeTab === 'ai-soal' && <SoalUjianGenerator />}
+            {activeTab === 'ai-kartu-soal' && <KartuSoalGenerator />}
+            {activeTab === 'ai-lkpd' && <LkpdGenerator />}
+            {activeTab === 'ai-ppt' && <PptGenerator />}
+            {activeTab === 'ai-chat' && <ChatAsistenGuru />}
 
-          {/* Reports & Settings */}
-          {activeTab === 'laporan' && (
-            <PusatLaporan
-              siswaList={siswaList}
-              mapelList={mapelList}
-              absensiList={absensiList}
-              nilaiList={nilaiList}
-              agendaList={agendaList}
-              pengaturan={pengaturan}
-            />
-          )}
+            {/* Reports & Settings */}
+            {activeTab === 'laporan' && (
+              <PusatLaporan
+                siswaList={siswaList}
+                mapelList={mapelList}
+                absensiList={absensiList}
+                nilaiList={nilaiList}
+                agendaList={agendaList}
+                pengaturan={pengaturan}
+              />
+            )}
 
-          {activeTab === 'pengaturan' && <PengaturanManager pengaturan={pengaturan} />}
+            {activeTab === 'pengaturan' && <PengaturanManager pengaturan={pengaturan} />}
+          </div>
         </main>
       </div>
 
@@ -650,6 +685,123 @@ export default function App() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL UNGGAH LOGO SEKOLAH */}
+      {isUploadLogoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 relative">
+            <button
+              onClick={() => setIsUploadLogoModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center mb-2">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                Unggah Logo Sekolah Baru
+              </h3>
+              <p className="text-xs text-slate-500">
+                Logo sekolah akan ditampilkan di samping judul dashboard, kop surat resmi, dan cetakan kartu siswa.
+              </p>
+            </div>
+
+            {/* Live Preview */}
+            <div className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white p-2 border-2 border-blue-500 shadow-md flex items-center justify-center">
+                {logoFileUrl ? (
+                  <img src={logoFileUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 className="w-8 h-8 text-slate-400" />
+                )}
+              </div>
+              <span className="text-[11px] font-semibold text-slate-500">Pratinjau Logo Sekolah</span>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                dbService.savePengaturan({ logoSekolahUrl: logoFileUrl.trim() });
+                setIsUploadLogoModalOpen(false);
+                showToast('Logo Sekolah Diperbarui!', 'success', 'Logo sekolah berhasil disimpan dan disinkronkan ke seluruh aplikasi.');
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  1. Unggah Berkas Gambar (PNG/JPG)
+                </label>
+                <label className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-50 dark:bg-blue-950/50 border border-dashed border-blue-300 dark:border-blue-800 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 cursor-pointer hover:bg-blue-100 transition-all">
+                  <Upload className="w-4 h-4" /> Pilih File Gambar Logo Sekolah
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(evt) => {
+                      const file = evt.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          Swal.fire('File Terlalu Besar', 'Maksimal ukuran file logo adalah 2MB.', 'warning');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          setLogoFileUrl(e.target?.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  2. Atau Tempelkan Tautan URL Logo
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={logoFileUrl}
+                  onChange={(e) => setLogoFileUrl(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                {logoFileUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setLogoFileUrl('')}
+                    className="text-xs text-rose-600 hover:underline font-semibold"
+                  >
+                    Reset Logo
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadLogoModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" /> Simpan Logo Sekolah
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

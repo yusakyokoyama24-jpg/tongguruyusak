@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 import Swal from 'sweetalert2';
 import { Camera, CheckCircle2, UserCheck, Calendar, Filter, Volume2, AlertCircle, Save } from 'lucide-react';
@@ -30,8 +30,13 @@ export const AbsensiManager: React.FC<AbsensiManagerProps> = ({ siswaList, absen
   const scanIntervalRef = useRef<number | null>(null);
   const lastScannedTimeRef = useRef<number>(0);
 
-  const kelasList = Array.from(new Set(siswaList.map((s) => s.kelas))).sort();
-  const studentsInClass = siswaList.filter((s) => s.kelas === selectedKelas);
+  const kelasList = useMemo(() => {
+    return Array.from(new Set(siswaList.map((s) => s.kelas))).sort();
+  }, [siswaList]);
+
+  const studentsInClass = useMemo(() => {
+    return siswaList.filter((s) => s.kelas === selectedKelas);
+  }, [siswaList, selectedKelas]);
 
   // Initialize draft when date or class changes
   useEffect(() => {
@@ -478,14 +483,27 @@ export const AbsensiManager: React.FC<AbsensiManagerProps> = ({ siswaList, absen
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <button
                   onClick={isScanning ? stopCamera : startCamera}
-                  className={`w-full py-2.5 text-sm font-semibold rounded-xl text-white transition-all ${
+                  className={`w-full py-2.5 text-xs font-bold rounded-xl text-white transition-all ${
                     isScanning ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
                   {isScanning ? 'Hentikan Kamera' : 'Aktifkan Kamera'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (siswaList.length > 0) {
+                      const randomSiswa = siswaList[Math.floor(Math.random() * siswaList.length)];
+                      handleQrScanned(randomSiswa.nisn);
+                    }
+                  }}
+                  className="w-full py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5"
+                >
+                  ⚡ Simulasikan Pindai QR Siswa (Uji Coba Direct)
                 </button>
               </div>
             </div>

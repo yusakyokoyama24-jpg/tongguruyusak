@@ -7,6 +7,7 @@ export interface Siswa {
   noHpOrtu: string;
   alamat: string;
   foto?: string;
+  statusKartu?: 'Aktif' | 'Nonaktif';
   userId: string;
 }
 
@@ -125,4 +126,13 @@ export interface PptPresentation {
   presentationTitle: string;
   subject?: string;
   slides: PptSlide[];
+}
+
+export interface LogAktivitas {
+  id: string;
+  kategori: 'presensi' | 'nilai' | 'ai' | 'siswa' | 'jadwal' | 'agenda' | 'pengaturan';
+  judul: string;
+  keterangan?: string;
+  waktu: string;
+  timestamp: number;
 }
